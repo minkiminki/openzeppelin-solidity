@@ -16,7 +16,7 @@ contract RingTokenMixer {
     }
 
     function Kill() public {
-        if ( (msg.sender != owner) && (owner != 0) ) revert();
+        if ( (msg.sender != owner) && (owner != address(0)) ) revert();
         selfdestruct(msg.sender);
     }
 
@@ -141,16 +141,16 @@ contract RingTokenMixer {
 
     //Address Functions - Convert compressed public key into RingMixer address
     function GetAddress(uint256 PubKey)
-        public view returns (address addr)
+        public returns (address addr)
     {
         uint256[2] memory temp;
         temp = ExpandPoint(PubKey);
-        addr = address( keccak256(temp[0], temp[1]) );
+        addr = address( uint160(uint256(keccak256(abi.encodePacked(temp[0], temp[1])))) );
     }
 
     //Base EC Functions
     function ecAdd(uint256[2] memory p0, uint256[2] memory p1)
-        public pure returns (uint256[2] memory p2)
+        public returns (uint256[2] memory p2)
     {
         assembly {
             //Get Free Memory Pointer
@@ -175,7 +175,7 @@ contract RingTokenMixer {
     }
 
     function ecMul(uint256[2] memory p0, uint256 s)
-        public pure returns (uint256[2] memory p1)
+        public returns (uint256[2] memory p1)
     {
         assembly {
             //Get Free Memory Pointersub
@@ -211,7 +211,7 @@ contract RingTokenMixer {
     }
 
     function EvaluateCurve(uint256 x)
-        public pure returns (uint256 y, bool onCurve)
+        public returns (uint256 y, bool onCurve)
     {
         uint256 y_squared = mulmod(x,x, P);
         y_squared = mulmod(y_squared, x, P);
@@ -247,7 +247,7 @@ contract RingTokenMixer {
     }
 
     function ExpandPoint(uint256 Pin)
-        public pure returns (uint256[2] memory Pout)
+        public returns (uint256[2] memory Pout)
     {
         //Get x value (mask out sign bit)
         Pout[0] = Pin & (~ECSignMask);
@@ -286,15 +286,15 @@ contract RingTokenMixer {
     function HashFunction(RingMessage memory message, uint256[2] memory left, uint256[2] memory right)
         internal pure returns (uint256 h)
     {
-        return (uint256(keccak256(message.destination, message.value, left[0], left[1], right[0], right[1])) % N);
+        return (uint256(keccak256(abi.encodePacked(message.destination, message.value, left[0], left[1], right[0], right[1]))) % N);
     }
 
     //Return H = alt_bn128 evaluated at keccak256(p)
     function HashPoint(uint256[2] memory p)
-        internal pure returns (uint256[2] memory h)
+        internal returns (uint256[2] memory h)
     {
         bool onCurve;
-        h[0] = uint256(keccak256(p[0], p[1])) % N;
+        h[0] = uint256(keccak256(abi.encodePacked(p[0], p[1]))) % N;
 
         while(!onCurve) {
             (h[1], onCurve) = EvaluateCurve(h[0]);
@@ -304,7 +304,7 @@ contract RingTokenMixer {
     }
 
     function KeyImage(uint256 xk, uint256[2] memory Pk)
-        internal pure returns (uint256[2] memory Ix)
+        internal returns (uint256[2] memory Ix)
     {
         //Ix = xk * HashPoint(Pk)
         Ix = HashPoint(Pk);
@@ -312,7 +312,7 @@ contract RingTokenMixer {
     }
 
     function RingStartingSegment(RingMessage memory message, uint256 alpha, uint256[2] memory P0)
-        internal pure returns (uint256 c0)
+        internal returns (uint256 c0)
     {
         //Memory Registers
         uint256[2] memory left;
@@ -326,7 +326,7 @@ contract RingTokenMixer {
     }
 
     function RingSegment(RingMessage memory message, uint256 c0, uint256 s0, uint256[2] memory P0, uint256[2] memory Ix)
-        internal pure returns (uint256 c1)
+        internal returns (uint256 c1)
     {
         //Memory Registers
         uint256[2] memory temp;
@@ -378,7 +378,7 @@ contract RingTokenMixer {
     //      signature[2*N+2 ... 31     ] - Padding (0)
     //      e.g. N=3; signature = { Ik, c0, s0, s1, s2, PubKey0, PubKey1, PubKey2 }
     function RingSign(RingMessage memory message, uint256[] memory data)
-        internal pure returns (uint256[32] memory signature)
+        internal returns (uint256[32] memory signature)
     {
         //Check Array Lengths
         require( data.length >= 6 ); //Minimum size (2 PubKeys) = (2*2+2) = 6
@@ -433,7 +433,7 @@ contract RingTokenMixer {
     }
 
     function RingSign_User(address[] memory destination, uint256[] memory value, uint256[] memory data)
-        public pure returns (uint256[32] memory signature)
+        public returns (uint256[32] memory signature)
     {
         return RingSign(RingMessage(destination, value), data);
     }
@@ -451,7 +451,7 @@ contract RingTokenMixer {
     //Outputs:
     //  success (bool) - true/false indicating if signature is valid on message
     function RingVerify(RingMessage memory message, uint256[] memory signature)
-        internal pure returns (bool success)
+        internal returns (bool success)
     {
         //Check Array Lengths
         require( signature.length >= 6 ); //Minimum size (2 PubKeys) = (2*2+2) = 6
@@ -481,7 +481,7 @@ contract RingTokenMixer {
     }
 
     function RingVerify_User(address[] memory destination, uint256[] memory value, uint256[] memory signature)
-        public pure returns (bool success)
+        public returns (bool success)
     {
         return RingVerify(RingMessage(destination, value), signature);
     }
