@@ -4,22 +4,22 @@ import "./ERC20.sol";
 
 /* by minki */
 contract BankToken is ERC20 {
-    uint256 constant tokenValue;
+    uint256 tokenValue;
 
     constructor(uint256 _tokenValue) public {
         tokenValue = _tokenValue;
     }
 
-    function deposit(address account, uint256 amount) public {
+    function deposit(address account, uint256 amount) payable public {
         require(amount > 0);
-        require(amount * tokenVal == msg.value);
+        require(amount * tokenValue == msg.value);
         _mint(account, amount);
     }
 
-    function withdraw(address account, uint256 amount) public {
+    function withdraw(address payable account, uint256 amount) public {
         require(amount > 0);
-        require(_balances[msg.sender] >= amount);
-        assert(address(this).balance >= amount * tokenVal);
-        account.transfer(amount * tokenVal);
+        _burn(msg.sender, amount);
+        assert(address(this).balance >= amount * tokenValue);
+        account.transfer(amount * tokenValue);
     }
 }
